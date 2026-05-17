@@ -1,0 +1,438 @@
+/* portal.js */
+const LS_USER = 'hd_portal_user';
+let portalUser = null;
+
+/* ===== AUTH ===== */
+function initPortal() {
+  const saved = localStorage.getItem(LS_USER);
+  if (saved) { portalUser = JSON.parse(saved); showPortal(); }
+  else showLogin();
+
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('login-email').addEventListener('keydown', e => e.key==='Enter' && doLogin());
+  document.getElementById('portal-logout').addEventListener('click', () => {
+    localStorage.removeItem(LS_USER); portalUser = null; showLogin();
+  });
+  document.getElementById('quick-track-link').addEventListener('click', e => {
+    e.preventDefault(); showPortal(); switchTab('track');
+  });
+
+  // Nav tabs
+  document.querySelectorAll('.pnav-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Submit ticket
+  document.getElementById('submit-ticket-btn').addEventListener('click', submitTicket);
+
+  // Track
+  document.getElementById('track-btn').addEventListener('click', doTrack);
+  document.getElementById('track-id-input').addEventListener('keydown', e => e.key==='Enter' && doTrack());
+
+  // Filters
+  document.getElementById('mt-filter-status').addEventListener('change', renderMyTickets);
+  document.getElementById('mt-search').addEventListener('input', renderMyTickets);
+
+  // Modals
+  document.getElementById('success-close-btn').addEventListener('click', () => {
+    closeModal('success-overlay'); switchTab('my-tickets');
+  });
+  document.getElementById('success-track-btn').addEventListener('click', () => {
+    const id = document.getElementById('success-ticket-id').textContent;
+    closeModal('success-overlay');
+    switchTab('track');
+    document.getElementById('track-id-input').value = id;
+    doTrack();
+  });
+  document.getElementById('escalate-cancel-btn').addEventListener('click', () => closeModal('escalate-overlay'));
+  document.getElementById('escalate-submit-btn').addEventListener('click', doEscalate);
+}
+
+function doLogin() {
+  const name  = document.getElementById('login-name').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  const dept  = document.getElementById('login-dept').value;
+  const err   = document.getElementById('login-error');
+  if (!name)  { err.textContent = 'Please enter your full name.'; return; }
+  if (!email || !email.includes('@')) { err.textContent = 'Please enter a valid email address.'; return; }
+  if (!dept)  { err.textContent = 'Please select your department.'; return; }
+  err.textContent = '';
+  portalUser = { name, email, dept };
+  localStorage.setItem(LS_USER, JSON.stringify(portalUser));
+  showPortal();
+}
+
+function showLogin() {
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('portal-screen').classList.remove('active');
+}
+
+function showPortal() {
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('portal-screen').classList.add('active');
+  if (portalUser) {
+    const initials = portalUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('portal-user-badge').textContent = initials + ' ' + portalUser.name.split(' ')[0];
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('hero-greeting').textContent = greet + ', ' + portalUser.name.split(' ')[0] + '!';
+    document.getElementById('hero-sub').textContent = 'How can IT support you today?';
+  }
+  switchTab('dashboard');
+  renderHeroStats();
+  renderRecentTickets();
+}
+
+/* ===== NAVIGATION ===== */
+function switchTab(tab) {
+  document.querySelectorAll('.pnav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.ptab').forEach(p => p.classList.toggle('active', p.id === 'ptab-' + tab));
+  if (tab === 'my-tickets') renderMyTickets();
+  if (tab === 'dashboard') { renderHeroStats(); renderRecentTickets(); }
+}
+
+function setCategory(cat) {
+  const sel = document.getElementById('nt-category');
+  if (sel) sel.value = cat;
+}
+
+function prefillAndGo(subject, category, priority) {
+  switchTab('new-ticket');
+  document.getElementById('nt-subject').value = subject;
+  document.getElementById('nt-category').value = category;
+  document.getElementById('nt-priority').value = priority;
+}
+
+/* ===== TICKET DATA ===== */
+function getMyTickets() {
+  const all = loadTickets();
+  if (!portalUser) return all;
+  return all.filter(t => t.email && t.email.toLowerCase() === portalUser.email.toLowerCase());
+}
+
+function getAllTickets() { return loadTickets(); }
+
+/* ===== SUBMIT TICKET ===== */
+function submitTicket() {
+  const subject  = document.getElementById('nt-subject').value.trim();
+  const category = document.getElementById('nt-category').value;
+  const priority = document.getElementById('nt-priority').value;
+  const desc     = document.getElementById('nt-desc').value.trim();
+  const device   = document.getElementById('nt-device').value.trim();
+  const affected = document.getElementById('nt-affected').value;
+
+  if (!subject)  { pToast('Please enter a subject.','error'); return; }
+  if (!category) { pToast('Please select a category.','error'); return; }
+  if (!desc)     { pToast('Please describe the issue.','error'); return; }
+
+  const btn = document.getElementById('submit-ticket-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  setTimeout(() => {
+    btn.disabled = false; btn.textContent = 'Submit Ticket →';
+    const all = loadTickets();
+    const now = new Date().toISOString();
+    const id  = 'TKT-' + String(all.length + 1).padStart(4,'0');
+    const fullDesc = desc + (device ? `\n\nDevice: ${device}` : '') + `\nUsers affected: ${affected}`;
+    const ticket = {
+      id, subject,
+      requester: portalUser ? portalUser.name : 'Portal User',
+      email: portalUser ? portalUser.email : '',
+      category, priority,
+      status: 'Open',
+      agentId: '',
+      description: fullDesc,
+      created: now,
+      comments: [],
+      auditLog: [{ action:'Ticket submitted via User Portal', time:now, by: portalUser?.name||'User' }],
+      portalSubmitted: true,
+      escalated: false,
+    };
+    all.unshift(ticket);
+    saveTickets(all);
+
+    // Reset form
+    ['nt-subject','nt-desc','nt-device'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('nt-category').value='';
+    document.getElementById('nt-priority').value='Medium';
+    document.getElementById('nt-affected').value='1';
+
+    document.getElementById('success-ticket-id').textContent = id;
+    openModal('success-overlay');
+  }, 900);
+}
+
+/* ===== HERO STATS ===== */
+function renderHeroStats() {
+  const my = getMyTickets();
+  const open = my.filter(t=>t.status==='Open').length;
+  const inprog = my.filter(t=>t.status==='In Progress').length;
+  const resolved = my.filter(t=>t.status==='Resolved'||t.status==='Closed').length;
+  document.getElementById('hero-stats').innerHTML = `
+    <div class="hero-stat"><div class="hero-stat-val">${open}</div><div class="hero-stat-lbl">Open</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${inprog}</div><div class="hero-stat-lbl">In Progress</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${resolved}</div><div class="hero-stat-lbl">Resolved</div></div>
+  `;
+}
+
+/* ===== RECENT TICKETS ===== */
+function renderRecentTickets() {
+  const container = document.getElementById('recent-tickets-preview');
+  const tickets = getMyTickets().slice(0,3);
+  if (!tickets.length) {
+    container.innerHTML = '<div class="recent-empty">No tickets yet. <a href="#" onclick="switchTab(\'new-ticket\');return false">Submit your first ticket →</a></div>';
+    return;
+  }
+  container.innerHTML = tickets.map(t => ticketCardHTML(t, false)).join('');
+  attachCardEvents(container);
+}
+
+/* ===== MY TICKETS ===== */
+function renderMyTickets() {
+  const status = document.getElementById('mt-filter-status').value;
+  const search = document.getElementById('mt-search').value.toLowerCase();
+  let tickets = getMyTickets();
+  if (status) tickets = tickets.filter(t=>t.status===status);
+  if (search) tickets = tickets.filter(t=>t.subject.toLowerCase().includes(search)||t.id.toLowerCase().includes(search));
+  const container = document.getElementById('my-tickets-list');
+  if (!tickets.length) {
+    container.innerHTML = '<div class="recent-empty">No tickets found.</div>';
+    return;
+  }
+  container.innerHTML = tickets.map(t => ticketCardHTML(t, true)).join('');
+  attachCardEvents(container);
+}
+
+function ticketCardHTML(t, showTimeline) {
+  const statusCls = { Open:'pbadge-open','In Progress':'pbadge-inprogress','Resolved':'pbadge-resolved','Closed':'pbadge-closed' }[t.status]||'pbadge-open';
+  const priCls    = { Critical:'pbadge-critical',High:'pbadge-high',Medium:'pbadge-medium',Low:'pbadge-low' }[t.priority]||'pbadge-medium';
+  const catIcons  = { Network:'📶', Hardware:'🖥', Software:'💻', Account:'👤', Security:'🔒', Other:'📋' };
+  const icon = catIcons[t.category]||'📋';
+  const created = new Date(t.created).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const escalatedTag = t.escalated ? '<span class="escalated-tag">🚨 Escalated</span>' : '';
+  const canEscalate  = !t.escalated && (t.status==='Open'||t.status==='In Progress');
+  const canClose     = t.status==='Resolved';
+
+  const timeline = showTimeline ? buildTimeline(t.status) : '';
+  const slaBar   = buildSLABar(t);
+
+  return `
+  <div class="ticket-card" id="card-${t.id}">
+    <div class="ticket-card-top">
+      <div class="ticket-card-icon">${icon}</div>
+      <div class="ticket-card-info">
+        <div class="ticket-card-id">${t.id}</div>
+        <div class="ticket-card-subject" title="${t.subject}">${t.subject}</div>
+        <div class="ticket-card-meta">
+          <span class="tc-meta-item">📅 ${created}</span>
+          <span class="tc-meta-item">📁 ${t.category}</span>
+          ${t.agentId ? `<span class="tc-meta-item">👤 ${getAgentName(t.agentId)}</span>` : '<span class="tc-meta-item" style="color:#f59e0b">⏳ Unassigned</span>'}
+          ${escalatedTag}
+        </div>
+        ${slaBar}
+      </div>
+      <div class="ticket-card-right">
+        <span class="pbadge ${statusCls}">${t.status}</span>
+        <span class="pbadge ${priCls}">${t.priority}</span>
+      </div>
+    </div>
+    ${showTimeline ? timeline : ''}
+    <div class="ticket-card-actions">
+      <button class="portal-btn portal-btn-ghost btn-sm track-detail-btn" data-id="${t.id}">🔍 View Details</button>
+      ${canEscalate ? `<button class="portal-btn btn-sm escalate-btn" data-id="${t.id}" style="background:var(--red-light);color:var(--red);border:1.5px solid var(--red)">🚨 Escalate</button>` : ''}
+      ${canClose ? `<button class="portal-btn portal-btn-ghost btn-sm close-ticket-btn" data-id="${t.id}">✓ Mark Closed</button>` : ''}
+      ${t.comments.length ? `<span class="tc-meta-item" style="margin-left:auto">💬 ${t.comments.length} comment${t.comments.length>1?'s':''}</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function buildTimeline(status) {
+  const steps = ['Open','In Progress','Resolved','Closed'];
+  const idx   = steps.indexOf(status);
+  const html  = steps.map((s,i) => {
+    const done   = i < idx;
+    const active = i === idx;
+    const icons  = ['📥','🔧','✅','🔒'];
+    return `<div class="timeline-step ${done?'done':active?'active':''}">
+      <div class="ts-dot">${done||active?icons[i]:''}</div>
+      <div class="ts-label">${s}</div>
+    </div>`;
+  }).join('');
+  return `<div class="status-timeline"><div class="timeline-title">Progress</div><div class="timeline-steps">${html}</div></div>`;
+}
+
+function buildSLABar(t) {
+  if (t.status==='Resolved'||t.status==='Closed') return '';
+  const slaH = { Critical:2, High:8, Medium:24, Low:72 }[t.priority]||24;
+  const elapsed = (Date.now() - new Date(t.created).getTime()) / 3600000;
+  const pct = Math.min((elapsed/slaH)*100, 100);
+  const color = pct>100?'var(--red)':pct>75?'var(--orange)':'var(--green)';
+  const remaining = slaH - elapsed;
+  const label = remaining < 0 ? '⚠ SLA Breached' : remaining < 2 ? `⚡ ${remaining.toFixed(1)}h left` : `${remaining.toFixed(0)}h remaining`;
+  return `<div class="sla-timer-bar">
+    <div class="sla-bar-track"><div class="sla-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div style="font-size:.7rem;color:${color};font-weight:600;margin-top:2px">${label}</div>
+  </div>`;
+}
+
+function attachCardEvents(container) {
+  container.querySelectorAll('.track-detail-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchTab('track');
+      document.getElementById('track-id-input').value = btn.dataset.id;
+      doTrack();
+    });
+  });
+  container.querySelectorAll('.escalate-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEscalateModal(btn.dataset.id));
+  });
+  container.querySelectorAll('.close-ticket-btn').forEach(btn => {
+    btn.addEventListener('click', () => closeUserTicket(btn.dataset.id));
+  });
+}
+
+/* ===== TRACK ===== */
+function doTrack() {
+  const raw = document.getElementById('track-id-input').value.trim().toUpperCase();
+  const id  = raw.startsWith('TKT-') ? raw : 'TKT-' + raw.replace(/\D/g,'').padStart(4,'0');
+  const container = document.getElementById('track-result');
+  const all = loadTickets();
+  const t   = all.find(x => x.id === id);
+  if (!t) {
+    container.innerHTML = `<div class="track-not-found"><div style="font-size:2.5rem">🔍</div><h3 style="margin:12px 0 6px">Ticket not found</h3><p style="color:var(--text-2)">No ticket found with ID <strong>${raw||id}</strong>. Please check the ID and try again.</p></div>`;
+    return;
+  }
+  renderTicketDetail(t, container);
+}
+
+function renderTicketDetail(t, container) {
+  const statusCls = { Open:'pbadge-open','In Progress':'pbadge-inprogress','Resolved':'pbadge-resolved','Closed':'pbadge-closed' }[t.status]||'';
+  const priCls    = { Critical:'pbadge-critical',High:'pbadge-high',Medium:'pbadge-medium',Low:'pbadge-low' }[t.priority]||'';
+  const created   = new Date(t.created).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const agent     = getAgentById ? getAgentById(t.agentId) : null;
+  const canEsc    = !t.escalated && (t.status==='Open'||t.status==='In Progress');
+  const slaH      = { Critical:2, High:8, Medium:24, Low:72 }[t.priority]||24;
+  const elapsed   = (Date.now()-new Date(t.created).getTime())/3600000;
+  const remaining = slaH - elapsed;
+  const slaText   = (t.status==='Resolved'||t.status==='Closed') ? 'N/A' : remaining<0 ? '⚠ Breached' : remaining.toFixed(0)+'h remaining';
+  const slaColor  = remaining<0 ? 'var(--red)' : remaining<2 ? 'var(--orange)' : 'var(--green)';
+
+  const comments = t.comments.filter(c=>!c.internal);
+  const commentsHTML = comments.length
+    ? comments.map(c=>`<div class="dc-comment"><div class="dc-author">${c.author} · ${new Date(c.time).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>${c.text}</div>`).join('')
+    : '<p style="color:var(--text-3);font-size:.83rem">No comments yet.</p>';
+
+  const timeline = buildTimeline(t.status);
+
+  container.innerHTML = `
+  <div class="detail-card">
+    <div class="detail-card-header">
+      <div class="dch-id">${t.id}</div>
+      <div class="dch-subject">${t.subject}</div>
+      <div class="dch-badges">
+        <span class="dcw-badge">${t.status}</span>
+        <span class="dcw-badge">${t.priority}</span>
+        <span class="dcw-badge">📁 ${t.category}</span>
+        ${t.escalated?'<span class="dcw-badge" style="background:rgba(220,38,38,.3)">🚨 Escalated</span>':''}
+      </div>
+    </div>
+    ${timeline}
+    <div class="detail-card-body">
+      <div>
+        <div class="detail-info-grid">
+          <div class="di-row"><span class="di-label">Requester</span><span class="di-val">${t.requester}</span></div>
+          <div class="di-row"><span class="di-label">Assigned To</span><span class="di-val">${agent?agent.name:'<span style="color:var(--orange)">Unassigned</span>'}</span></div>
+          <div class="di-row"><span class="di-label">Created</span><span class="di-val">${created}</span></div>
+          <div class="di-row"><span class="di-label">SLA</span><span class="di-val" style="color:${slaColor}">${slaText}</span></div>
+          <div class="di-row"><span class="di-label">Department</span><span class="di-val">${portalUser?.dept||'—'}</span></div>
+        </div>
+        <div style="margin-top:16px;padding:14px;background:var(--bg);border-radius:var(--radius-sm);font-size:.85rem;line-height:1.6">
+          <strong style="font-size:.78rem;color:var(--text-2)">DESCRIPTION</strong><br/>${t.description.replace(/\n/g,'<br/>')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text-2);margin-bottom:10px">ACTIONS</div>
+        ${canEsc?`<button class="portal-btn portal-btn-danger" style="width:100%;margin-bottom:8px" onclick="openEscalateModal('${t.id}')">🚨 Escalate Ticket</button>`:''}
+        ${t.status==='Resolved'?`<button class="portal-btn portal-btn-ghost" style="width:100%;margin-bottom:8px" onclick="closeUserTicket('${t.id}')">✓ Confirm & Close</button>`:''}
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;font-size:.78rem;color:var(--text-2)">
+          <strong>Need to add info?</strong><br/>Reply to the notification email or contact IT directly.
+        </div>
+      </div>
+    </div>
+    <div class="detail-comments">
+      <div class="dc-title">💬 Updates (${comments.length})</div>
+      ${commentsHTML}
+    </div>
+  </div>`;
+}
+
+/* ===== ESCALATE ===== */
+function openEscalateModal(id) {
+  document.getElementById('escalate-ticket-id').value = id;
+  document.getElementById('escalate-reason').value = '';
+  openModal('escalate-overlay');
+}
+
+function doEscalate() {
+  const id     = document.getElementById('escalate-ticket-id').value;
+  const reason = document.getElementById('escalate-reason').value.trim();
+  if (!reason) { pToast('Please provide a reason for escalation.','error'); return; }
+  const all = loadTickets();
+  const idx = all.findIndex(t=>t.id===id);
+  if (idx===-1) return;
+  const t = all[idx];
+  const now = new Date().toISOString();
+  // Bump priority
+  const bump = { Low:'Medium', Medium:'High', High:'Critical', Critical:'Critical' };
+  const oldPri = t.priority;
+  t.priority = bump[t.priority] || t.priority;
+  t.escalated = true;
+  t.auditLog.push({ action:`Ticket escalated by user. Reason: ${reason}. Priority changed from ${oldPri} to ${t.priority}.`, time:now, by: portalUser?.name||'User' });
+  t.comments.push({ author: portalUser?.name||'User', text:`[Escalation Request] ${reason}`, internal:false, time:now });
+  saveTickets(all);
+  closeModal('escalate-overlay');
+  pToast(`Ticket ${id} escalated to ${t.priority} priority! IT manager notified.`,'success');
+  // Refresh views
+  renderMyTickets();
+  renderRecentTickets();
+  // Re-track if on track tab
+  if (document.getElementById('ptab-track').classList.contains('active')) doTrack();
+}
+
+/* ===== CLOSE TICKET ===== */
+function closeUserTicket(id) {
+  const all = loadTickets();
+  const idx = all.findIndex(t=>t.id===id);
+  if (idx===-1) return;
+  const now = new Date().toISOString();
+  all[idx].status = 'Closed';
+  all[idx].auditLog.push({ action:'Ticket closed by user — issue confirmed resolved.', time:now, by:portalUser?.name||'User' });
+  saveTickets(all);
+  pToast('Ticket closed. Thank you for confirming the resolution!','success');
+  renderMyTickets();
+  if (document.getElementById('ptab-track').classList.contains('active')) doTrack();
+}
+
+/* ===== MODALS ===== */
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('click', e => {
+  ['success-overlay','escalate-overlay'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(e.target===el) closeModal(id);
+  });
+});
+
+/* ===== TOASTS ===== */
+function pToast(msg,type='info') {
+  const c = document.getElementById('portal-toasts');
+  const t = document.createElement('div');
+  const icons = {success:'✅',error:'❌',info:'ℹ️'};
+  t.className=`portal-toast ${type}`;
+  t.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.animation='slideInRight .3s ease reverse'; setTimeout(()=>t.remove(),300); },3500);
+}
+
+/* ===== INIT ===== */
+document.addEventListener('DOMContentLoaded', initPortal);

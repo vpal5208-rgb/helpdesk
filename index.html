@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HelpDesk Pro — IT Support Management</title>
+<meta name="description" content="Professional IT Helpdesk management system with interactive dashboard, ticket tracking, and agent management."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/main.css"/>
+<link rel="stylesheet" href="css/components.css"/>
+<link rel="stylesheet" href="css/dashboard.css"/>
+<link rel="stylesheet" href="css/email.css"/>
+<link rel="stylesheet" href="css/users.css"/>
+</head>
+<body>
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">⚡</div>
+    <span class="brand-name">HelpDesk<span class="brand-accent">Pro</span></span>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" data-view="dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+    <button class="nav-item" data-view="tickets"><span class="nav-icon">🎫</span><span class="nav-label">Tickets</span><span class="nav-badge" id="open-count">0</span></button>
+    <button class="nav-item" data-view="agents"><span class="nav-icon">👥</span><span class="nav-label">Agents</span></button>
+    <button class="nav-item" data-view="users"><span class="nav-icon">🧑‍💼</span><span class="nav-label">Users</span><span class="nav-badge" id="users-count">0</span></button>
+    <button class="nav-item" data-view="reports"><span class="nav-icon">📈</span><span class="nav-label">Reports</span></button>
+    <button class="nav-item" data-view="settings"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">AD</div>
+      <div class="user-info"><div class="user-name">Admin User</div><div class="user-role">IT Manager</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main-content" id="main">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search" placeholder="Search tickets, agents..." autocomplete="off"/>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
+      <div class="notif-btn" id="notif-btn">
+        🔔<span class="notif-badge" id="notif-badge">3</span>
+      </div>
+      <a href="portal.html" class="btn btn-ghost" target="_blank" style="font-size:.82rem">🌐 User Portal</a>
+      <button class="btn btn-primary" id="new-ticket-btn">+ New Ticket</button>
+    </div>
+  </header>
+
+  <!-- Views -->
+  <div class="views-container">
+
+    <!-- DASHBOARD VIEW -->
+    <section class="view active" id="view-dashboard">
+      <div class="view-header">
+        <h1>Dashboard</h1>
+        <p class="view-sub">Real-time IT support overview</p>
+      </div>
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card kpi-blue"><div class="kpi-icon">🎫</div><div class="kpi-body"><div class="kpi-value" id="kpi-open">0</div><div class="kpi-label">Open Tickets</div><div class="kpi-trend up" id="kpi-open-trend"></div></div></div>
+        <div class="kpi-card kpi-green"><div class="kpi-icon">✅</div><div class="kpi-body"><div class="kpi-value" id="kpi-resolved">0</div><div class="kpi-label">Resolved Today</div><div class="kpi-trend up" id="kpi-resolved-trend"></div></div></div>
+        <div class="kpi-card kpi-red"><div class="kpi-icon">🚨</div><div class="kpi-body"><div class="kpi-value" id="kpi-breach">0</div><div class="kpi-label">SLA Breaches</div><div class="kpi-trend down" id="kpi-breach-trend"></div></div></div>
+        <div class="kpi-card kpi-purple"><div class="kpi-icon">⏱️</div><div class="kpi-body"><div class="kpi-value" id="kpi-avg">0h</div><div class="kpi-label">Avg Response</div><div class="kpi-trend up" id="kpi-avg-trend"></div></div></div>
+        <div class="kpi-card kpi-orange"><div class="kpi-icon">📋</div><div class="kpi-body"><div class="kpi-value" id="kpi-total">0</div><div class="kpi-label">Total Tickets</div></div></div>
+        <div class="kpi-card kpi-teal"><div class="kpi-icon">👥</div><div class="kpi-body"><div class="kpi-value" id="kpi-agents">0</div><div class="kpi-label">Active Agents</div></div></div>
+      </div>
+      <!-- Charts Row -->
+      <div class="charts-row">
+        <div class="chart-card wide"><div class="chart-header"><h3>Ticket Volume (7 Days)</h3><div class="chart-legend"><span class="leg-item"><span class="leg-dot blue"></span>Created</span><span class="leg-item"><span class="leg-dot green"></span>Resolved</span></div></div><canvas id="chart-volume" height="200"></canvas></div>
+        <div class="chart-card"><div class="chart-header"><h3>Priority Split</h3></div><canvas id="chart-priority" height="200"></canvas></div>
+      </div>
+      <!-- Bottom Row -->
+      <div class="bottom-row">
+        <div class="activity-card"><div class="chart-header"><h3>Recent Activity</h3></div><div class="activity-list" id="activity-list"></div></div>
+        <div class="chart-card"><div class="chart-header"><h3>Category Breakdown</h3></div><canvas id="chart-category" height="220"></canvas></div>
+        <div class="leaderboard-card"><div class="chart-header"><h3>Agent Leaderboard</h3></div><div class="leaderboard-list" id="leaderboard-list"></div></div>
+      </div>
+    </section>
+
+    <!-- TICKETS VIEW -->
+    <section class="view" id="view-tickets">
+      <div class="view-header">
+        <h1>Tickets</h1>
+        <p class="view-sub">Manage all support requests</p>
+      </div>
+      <!-- Filters -->
+      <div class="filter-bar">
+        <select id="filter-status" class="filter-select"><option value="">All Status</option><option>Open</option><option>In Progress</option><option>Resolved</option><option>Closed</option></select>
+        <select id="filter-priority" class="filter-select"><option value="">All Priority</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select>
+        <select id="filter-category" class="filter-select"><option value="">All Categories</option><option>Network</option><option>Hardware</option><option>Software</option><option>Account</option><option>Security</option><option>Other</option></select>
+        <select id="filter-agent" class="filter-select"><option value="">All Agents</option></select>
+        <input type="text" id="ticket-search" placeholder="Search tickets…" class="filter-input"/>
+        <button class="btn btn-ghost" id="clear-filters">Clear</button>
+      </div>
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-toolbar"><span id="ticket-count-label">Loading…</span><div class="table-actions"><button class="btn btn-ghost btn-sm" id="export-btn">⬇ Export</button></div></div>
+        <div class="table-wrapper">
+          <table class="tickets-table" id="tickets-table">
+            <thead><tr><th><input type="checkbox" id="select-all"/></th><th>ID</th><th>Subject</th><th>Requester</th><th>Category</th><th>Priority</th><th>Status</th><th>Assigned To</th><th>Created</th><th>SLA</th><th>Actions</th></tr></thead>
+            <tbody id="tickets-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer"><div class="pagination" id="pagination"></div></div>
+      </div>
+    </section>
+
+    <!-- AGENTS VIEW -->
+    <section class="view" id="view-agents">
+      <div class="view-header">
+        <h1>Agents</h1>
+        <p class="view-sub">IT support team overview</p>
+      </div>
+      <div class="agents-grid" id="agents-grid"></div>
+    </section>
+
+    <!-- REPORTS VIEW -->
+    <section class="view" id="view-reports">
+      <div class="view-header"><h1>Reports</h1><p class="view-sub">Analytics and performance metrics</p></div>
+      <div class="reports-grid">
+        <div class="chart-card wide"><div class="chart-header"><h3>Monthly Ticket Trend</h3></div><canvas id="chart-monthly" height="220"></canvas></div>
+        <div class="chart-card"><div class="chart-header"><h3>Resolution Rate</h3></div><canvas id="chart-resolution" height="220"></canvas></div>
+        <div class="chart-card wide"><div class="chart-header"><h3>Agent Performance</h3></div><canvas id="chart-agent-perf" height="220"></canvas></div>
+      </div>
+    </section>
+
+    <!-- USERS VIEW -->
+    <section class="view" id="view-users">
+      <div class="view-header">
+        <h1>User Management</h1>
+        <p class="view-sub">Create, suspend, reset and manage portal users</p>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="users-toolbar">
+        <div class="users-search-wrap">
+          <span>🔍</span>
+          <input type="text" id="users-search" placeholder="Search by name, email or department…" class="filter-input"/>
+        </div>
+        <div class="users-filter-group">
+          <select id="users-filter-status" class="filter-select">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="pending">Pending</option>
+          </select>
+          <select id="users-filter-dept" class="filter-select">
+            <option value="">All Departments</option>
+            <option>Engineering</option><option>Marketing</option><option>Finance</option>
+            <option>HR</option><option>Sales</option><option>Operations</option>
+            <option>Design</option><option>Legal</option>
+          </select>
+        </div>
+        <div class="users-actions">
+          <button class="btn btn-ghost" id="bulk-action-btn" disabled>Bulk Action ▾</button>
+          <div class="bulk-dropdown" id="bulk-dropdown">
+            <button class="bulk-opt" data-action="suspend">⏸ Suspend Selected</button>
+            <button class="bulk-opt" data-action="activate">▶ Activate Selected</button>
+            <button class="bulk-opt" data-action="reset">🔑 Reset Passwords</button>
+            <button class="bulk-opt danger" data-action="delete">🗑 Delete Selected</button>
+          </div>
+          <button class="btn btn-ghost" id="import-users-btn">⬆ Import CSV</button>
+          <button class="btn btn-primary" id="add-user-btn">+ Add User</button>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="users-stats-row" id="users-stats-row"></div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span id="users-count-label">Loading…</span>
+          <div class="table-actions">
+            <button class="btn btn-ghost btn-sm" id="export-users-btn">⬇ Export CSV</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="tickets-table" id="users-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="users-select-all"/></th>
+                <th>User</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Tickets</th>
+                <th>Last Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer"><div class="pagination" id="users-pagination"></div></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS VIEW -->
+    <section class="view" id="view-settings">
+      <div class="view-header"><h1>Settings</h1><p class="view-sub">System configuration &amp; email notifications</p></div>
+
+      <!-- Settings Tabs -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-stab="email">✉ Email Configuration</button>
+        <button class="settings-tab" data-stab="sla">⏱ SLA</button>
+        <button class="settings-tab" data-stab="appearance">🎨 Appearance</button>
+        <button class="settings-tab" data-stab="notif">🔔 Notifications</button>
+      </div>
+
+      <!-- ── EMAIL CONFIGURATION TAB ── -->
+      <div class="stab-panel active" id="stab-email">
+        <div class="email-settings-layout">
+
+          <!-- SMTP Server -->
+          <div class="settings-card email-card">
+            <div class="email-card-header">
+              <div class="email-card-icon smtp-icon">🖥</div>
+              <div>
+                <h3>SMTP Server</h3>
+                <p class="email-card-sub">Outgoing mail server configuration</p>
+              </div>
+              <div class="email-status-badge" id="smtp-status-badge">
+                <span class="status-dot dot-offline"></span> Not Tested
+              </div>
+            </div>
+            <div class="email-form-grid">
+              <div class="form-group">
+                <label>SMTP Host *</label>
+                <input type="text" id="smtp-host" class="form-input" placeholder="smtp.gmail.com" value="smtp.company.com"/>
+              </div>
+              <div class="form-group">
+                <label>Port *</label>
+                <input type="number" id="smtp-port" class="form-input" placeholder="587" value="587"/>
+              </div>
+              <div class="form-group">
+                <label>Username *</label>
+                <input type="email" id="smtp-user" class="form-input" placeholder="helpdesk@company.com" value="helpdesk@company.com"/>
+              </div>
+              <div class="form-group">
+                <label>Password *</label>
+                <div class="input-with-icon">
+                  <input type="password" id="smtp-pass" class="form-input" placeholder="••••••••••••" value="secret123"/>
+                  <button class="input-icon-btn" id="toggle-smtp-pass" title="Show/hide password">👁</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Encryption</label>
+                <select id="smtp-enc" class="form-input">
+                  <option value="tls" selected>TLS (Recommended)</option>
+                  <option value="ssl">SSL</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Connection Timeout (s)</label>
+                <input type="number" id="smtp-timeout" class="form-input" value="30" min="5" max="120"/>
+              </div>
+            </div>
+            <div class="email-card-footer">
+              <button class="btn btn-ghost" id="test-smtp-btn">🔌 Test Connection</button>
+              <div class="smtp-test-result" id="smtp-test-result"></div>
+            </div>
+          </div>
+
+          <!-- Sender Details -->
+          <div class="settings-card email-card">
+            <div class="email-card-header">
+              <div class="email-card-icon sender-icon">📤</div>
+              <div>
+                <h3>Sender Details</h3>
+                <p class="email-card-sub">How emails appear to recipients</p>
+              </div>
+            </div>
+            <div class="email-form-grid">
+              <div class="form-group">
+                <label>From Name *</label>
+                <input type="text" id="email-from-name" class="form-input" placeholder="HelpDesk Pro" value="HelpDesk Pro"/>
+              </div>
+              <div class="form-group">
+                <label>From Email *</label>
+                <input type="email" id="email-from-addr" class="form-input" placeholder="noreply@company.com" value="noreply@company.com"/>
+              </div>
+              <div class="form-group">
+                <label>Reply-To Email</label>
+                <input type="email" id="email-reply-to" class="form-input" placeholder="support@company.com" value="support@company.com"/>
+              </div>
+              <div class="form-group">
+                <label>Email Signature</label>
+                <textarea id="email-signature" class="form-input" rows="3" placeholder="-- &#10;HelpDesk Pro | IT Support&#10;support@company.com">-- 
+HelpDesk Pro | IT Support
+support@company.com | +1 (800) 555-0199</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notification Triggers -->
+          <div class="settings-card email-card full-width-card">
+            <div class="email-card-header">
+              <div class="email-card-icon trigger-icon">⚡</div>
+              <div>
+                <h3>Notification Triggers</h3>
+                <p class="email-card-sub">Choose which events send email notifications</p>
+              </div>
+            </div>
+            <div class="triggers-grid">
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-new-ticket" checked/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">New Ticket Created</div>
+                  <div class="trigger-desc">Notify when a new support ticket is submitted</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-new-ticket">
+                    <option value="agent">Assigned Agent</option>
+                    <option value="all" selected>All Agents</option>
+                    <option value="manager">Manager Only</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-assigned" checked/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">Ticket Assigned</div>
+                  <div class="trigger-desc">Notify agent when a ticket is assigned to them</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-assigned">
+                    <option value="agent" selected>Assigned Agent</option>
+                    <option value="all">All Agents</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-status" checked/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">Status Changed</div>
+                  <div class="trigger-desc">Notify requester when ticket status changes</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-status">
+                    <option value="requester" selected>Requester</option>
+                    <option value="both">Requester &amp; Agent</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-sla" checked/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">SLA Breach Warning</div>
+                  <div class="trigger-desc">Alert when a ticket is approaching or past SLA deadline</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-sla">
+                    <option value="agent" selected>Assigned Agent</option>
+                    <option value="manager">Manager Only</option>
+                    <option value="all">All Agents</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-resolved" checked/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">Ticket Resolved</div>
+                  <div class="trigger-desc">Notify requester when their ticket is resolved</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-resolved">
+                    <option value="requester" selected>Requester</option>
+                    <option value="both">Requester &amp; Agent</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-comment"/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">New Comment Added</div>
+                  <div class="trigger-desc">Notify when a public comment is posted on a ticket</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-comment">
+                    <option value="both" selected>Requester &amp; Agent</option>
+                    <option value="requester">Requester Only</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-summary"/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">Daily Summary Digest</div>
+                  <div class="trigger-desc">Send daily report of open, resolved and SLA metrics</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-summary">
+                    <option value="manager" selected>Manager Only</option>
+                    <option value="all">All Agents</option>
+                  </select>
+                </div>
+              </div>
+              <div class="trigger-item">
+                <div class="trigger-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="trig-critical" checked/>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="trigger-info">
+                  <div class="trigger-name">Critical Ticket Alert</div>
+                  <div class="trigger-desc">Immediate alert for any ticket with Critical priority</div>
+                </div>
+                <div class="trigger-recipients">
+                  <select class="trigger-recv-sel form-input" id="recv-critical">
+                    <option value="manager" selected>Manager Only</option>
+                    <option value="all">All Agents &amp; Manager</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Test Email -->
+          <div class="settings-card email-card full-width-card">
+            <div class="email-card-header">
+              <div class="email-card-icon test-icon">🧪</div>
+              <div>
+                <h3>Send Test Email</h3>
+                <p class="email-card-sub">Verify your email configuration is working</p>
+              </div>
+            </div>
+            <div class="test-email-form">
+              <div class="form-group" style="flex:1">
+                <label>Recipient Email</label>
+                <input type="email" id="test-email-addr" class="form-input" placeholder="admin@company.com"/>
+              </div>
+              <div class="form-group">
+                <label>Template</label>
+                <select id="test-email-template" class="form-input">
+                  <option value="new_ticket">New Ticket Created</option>
+                  <option value="assigned">Ticket Assigned</option>
+                  <option value="resolved">Ticket Resolved</option>
+                  <option value="sla_breach">SLA Breach Warning</option>
+                  <option value="summary">Daily Summary</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" id="send-test-email-btn" style="align-self:flex-end">
+                📨 Send Test Email
+              </button>
+            </div>
+            <div class="email-preview-box" id="email-preview-box">
+              <div class="email-preview-header">
+                <span class="preview-label">Preview</span>
+                <button class="btn btn-ghost btn-sm" id="refresh-preview-btn">↻ Refresh</button>
+              </div>
+              <div id="email-preview-content" class="email-preview-content"></div>
+            </div>
+          </div>
+
+        </div><!-- /email-settings-layout -->
+
+        <!-- Save Button -->
+        <div class="email-save-bar">
+          <div class="save-bar-left">
+            <span class="save-status" id="email-save-status"></span>
+          </div>
+          <div class="save-bar-right">
+            <button class="btn btn-ghost" id="reset-email-btn">↺ Reset to Defaults</button>
+            <button class="btn btn-primary" id="save-email-btn">💾 Save Email Configuration</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SLA TAB ── -->
+      <div class="stab-panel" id="stab-sla">
+        <div class="settings-grid">
+          <div class="settings-card"><h3>SLA Configuration</h3>
+            <div class="setting-item"><label>Critical (hrs)</label><input type="number" class="setting-input" value="2" id="sla-critical"/></div>
+            <div class="setting-item"><label>High (hrs)</label><input type="number" class="setting-input" value="8" id="sla-high"/></div>
+            <div class="setting-item"><label>Medium (hrs)</label><input type="number" class="setting-input" value="24" id="sla-medium"/></div>
+            <div class="setting-item"><label>Low (hrs)</label><input type="number" class="setting-input" value="72" id="sla-low"/></div>
+            <button class="btn btn-primary" id="save-sla">Save SLA Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── APPEARANCE TAB ── -->
+      <div class="stab-panel" id="stab-appearance">
+        <div class="settings-grid">
+          <div class="settings-card"><h3>Appearance</h3>
+            <div class="setting-item"><label>Theme</label><div class="toggle-group"><button class="toggle-btn active" id="theme-light-btn">☀ Light</button><button class="toggle-btn" id="theme-dark-btn">🌙 Dark</button></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NOTIFICATIONS TAB ── -->
+      <div class="stab-panel" id="stab-notif">
+        <div class="settings-grid">
+          <div class="settings-card"><h3>In-App Notifications</h3>
+            <div class="setting-item"><label>Email on new ticket</label><input type="checkbox" id="notif-new" checked/></div>
+            <div class="setting-item"><label>SLA breach alerts</label><input type="checkbox" id="notif-sla" checked/></div>
+            <div class="setting-item"><label>Daily summary</label><input type="checkbox" id="notif-summary"/></div>
+            <div class="setting-item"><label>Agent assignment alerts</label><input type="checkbox" id="notif-assign" checked/></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </div><!-- /views-container -->
+</main>
+
+<!-- MODALS -->
+<!-- New/Edit Ticket Modal -->
+<div class="modal-overlay" id="ticket-modal-overlay">
+  <div class="modal" id="ticket-modal">
+    <div class="modal-header">
+      <h2 id="modal-title">New Ticket</h2>
+      <button class="modal-close" id="ticket-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ticket-id-field"/>
+      <div class="form-row">
+        <div class="form-group"><label>Subject *</label><input type="text" id="f-subject" class="form-input" placeholder="Brief description of issue"/></div>
+      </div>
+      <div class="form-row two-col">
+        <div class="form-group"><label>Category</label><select id="f-category" class="form-input"><option>Network</option><option>Hardware</option><option>Software</option><option>Account</option><option>Security</option><option>Other</option></select></div>
+        <div class="form-group"><label>Priority</label><select id="f-priority" class="form-input"><option>Low</option><option>Medium</option><option selected>High</option><option>Critical</option></select></div>
+      </div>
+      <div class="form-row two-col">
+        <div class="form-group"><label>Requester Name *</label><input type="text" id="f-requester" class="form-input" placeholder="John Doe"/></div>
+        <div class="form-group"><label>Requester Email</label><input type="email" id="f-email" class="form-input" placeholder="john@company.com"/></div>
+      </div>
+      <div class="form-row two-col">
+        <div class="form-group"><label>Assign To</label><select id="f-agent" class="form-input"><option value="">Unassigned</option></select></div>
+        <div class="form-group"><label>Status</label><select id="f-status" class="form-input"><option>Open</option><option>In Progress</option><option>Resolved</option><option>Closed</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Description</label><textarea id="f-desc" class="form-input" rows="4" placeholder="Detailed description of the issue…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="ticket-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="ticket-modal-save">Create Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket Detail Modal -->
+<div class="modal-overlay" id="detail-modal-overlay">
+  <div class="modal modal-lg" id="detail-modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="detail-title">Ticket #000</h2>
+        <div id="detail-meta" class="detail-meta"></div>
+      </div>
+      <button class="modal-close" id="detail-modal-close">✕</button>
+    </div>
+    <div class="modal-body detail-body">
+      <div class="detail-left">
+        <div class="detail-section"><h4>Description</h4><p id="detail-desc"></p></div>
+        <div class="detail-section"><h4>Comments / Notes</h4>
+          <div class="comments-list" id="comments-list"></div>
+          <div class="comment-form">
+            <textarea id="comment-input" class="form-input" rows="2" placeholder="Add a comment or internal note…"></textarea>
+            <div class="comment-actions">
+              <label><input type="checkbox" id="comment-internal"/> Internal note</label>
+              <button class="btn btn-primary btn-sm" id="add-comment-btn">Post</button>
+            </div>
+          </div>
+        </div>
+        <div class="detail-section"><h4>Audit Log</h4><div class="audit-list" id="audit-list"></div></div>
+      </div>
+      <div class="detail-right">
+        <div class="detail-info-card">
+          <div class="info-row"><span class="info-label">Status</span><span id="di-status" class="badge"></span></div>
+          <div class="info-row"><span class="info-label">Priority</span><span id="di-priority" class="badge"></span></div>
+          <div class="info-row"><span class="info-label">Category</span><span id="di-category"></span></div>
+          <div class="info-row"><span class="info-label">Requester</span><span id="di-requester"></span></div>
+          <div class="info-row"><span class="info-label">Assigned To</span><span id="di-agent"></span></div>
+          <div class="info-row"><span class="info-label">Created</span><span id="di-created"></span></div>
+          <div class="info-row"><span class="info-label">SLA</span><span id="di-sla" class="sla-timer"></span></div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-primary w-full" id="detail-edit-btn">✏ Edit Ticket</button>
+          <button class="btn btn-success w-full" id="detail-resolve-btn">✅ Mark Resolved</button>
+          <button class="btn btn-danger w-full" id="detail-close-btn">🔒 Close Ticket</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT USER MODAL -->
+<div class="modal-overlay" id="user-modal-overlay">
+  <div class="modal" id="user-modal">
+    <div class="modal-header">
+      <h2 id="user-modal-title">Add User</h2>
+      <button class="modal-close" id="user-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="um-id"/>
+      <div class="form-row two-col">
+        <div class="form-group"><label>First Name *</label><input type="text" id="um-fname" class="form-input" placeholder="John"/></div>
+        <div class="form-group"><label>Last Name *</label><input type="text" id="um-lname" class="form-input" placeholder="Smith"/></div>
+      </div>
+      <div class="form-row two-col">
+        <div class="form-group"><label>Email *</label><input type="email" id="um-email" class="form-input" placeholder="john@company.com"/></div>
+        <div class="form-group"><label>Phone</label><input type="text" id="um-phone" class="form-input" placeholder="+1 (555) 000-0000"/></div>
+      </div>
+      <div class="form-row two-col">
+        <div class="form-group"><label>Department *</label>
+          <select id="um-dept" class="form-input">
+            <option value="">Select…</option>
+            <option>Engineering</option><option>Marketing</option><option>Finance</option>
+            <option>HR</option><option>Sales</option><option>Operations</option>
+            <option>Design</option><option>Legal</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Role</label>
+          <select id="um-role" class="form-input">
+            <option value="end-user">End User</option>
+            <option value="power-user">Power User</option>
+            <option value="agent">IT Agent</option>
+            <option value="manager">IT Manager</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row two-col">
+        <div class="form-group"><label>Status</label>
+          <select id="um-status" class="form-input">
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Location / Office</label><input type="text" id="um-location" class="form-input" placeholder="HQ — Floor 3"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Notes</label><textarea id="um-notes" class="form-input" rows="2" placeholder="Optional notes about this user…"></textarea></div>
+      </div>
+      <div class="user-send-invite-row">
+        <label class="user-checkbox-label"><input type="checkbox" id="um-send-invite" checked/> Send welcome email with login instructions</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="user-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="user-modal-save">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal-overlay">
+  <div class="modal" id="import-modal">
+    <div class="modal-header"><h2>Bulk Import Users</h2><button class="modal-close" id="import-modal-close">✕</button></div>
+    <div class="modal-body">
+      <div class="import-drop-zone" id="import-drop-zone">
+        <div class="import-drop-icon">📄</div>
+        <div class="import-drop-title">Drop CSV file here or click to browse</div>
+        <div class="import-drop-sub">Required columns: first_name, last_name, email, department, role</div>
+        <input type="file" id="import-file-input" accept=".csv" style="display:none"/>
+        <button class="btn btn-ghost" id="import-browse-btn">Browse File</button>
+      </div>
+      <div class="import-preview" id="import-preview" style="display:none">
+        <div class="import-preview-header">
+          <span id="import-preview-count">0 users ready to import</span>
+          <button class="btn btn-ghost btn-sm" id="import-clear-btn">Clear</button>
+        </div>
+        <div class="import-preview-table" id="import-preview-table"></div>
+      </div>
+      <div class="import-paste-section">
+        <div class="import-or-divider">OR paste CSV data</div>
+        <textarea id="import-paste" class="form-input" rows="5" placeholder="first_name,last_name,email,department,role&#10;John,Smith,j.smith@co.com,Engineering,end-user&#10;Jane,Doe,j.doe@co.com,Marketing,end-user"></textarea>
+        <button class="btn btn-ghost btn-sm" id="parse-paste-btn">Parse →</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="import-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="import-confirm-btn" disabled>Import Users</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD RESET RESULT MODAL -->
+<div class="modal-overlay" id="reset-modal-overlay">
+  <div class="modal" id="reset-modal">
+    <div class="modal-header"><h2>🔑 Password Reset</h2><button class="modal-close" id="reset-modal-close">✕</button></div>
+    <div class="modal-body">
+      <div id="reset-results-list" class="reset-results-list"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" id="reset-modal-ok">Done</button></div>
+  </div>
+</div>
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-panel-header"><h4>Notifications</h4><button class="btn btn-ghost btn-sm" id="mark-all-read">Mark all read</button></div>
+  <div class="notif-list" id="notif-list"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<link rel="stylesheet" href="css/users.css"/>
+<script src="js/data.js"></script>
+<script src="js/tickets.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/email.js"></script>
+<script src="js/users.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

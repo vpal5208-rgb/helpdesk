@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>IT Support Portal — Submit & Track Your Tickets</title>
+<meta name="description" content="Submit IT support requests, track ticket status, and escalate urgent issues through the self-service portal."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/portal.css"/>
+</head>
+<body>
+
+<!-- ======= LOGIN SCREEN ======= -->
+<div id="login-screen" class="screen active">
+  <div class="login-bg">
+    <div class="login-blob b1"></div>
+    <div class="login-blob b2"></div>
+    <div class="login-blob b3"></div>
+  </div>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-icon">⚡</div>
+      <div>
+        <div class="login-brand-name">HelpDesk<span class="accent">Pro</span></div>
+        <div class="login-brand-sub">Self-Service Support Portal</div>
+      </div>
+    </div>
+    <h1 class="login-title">Welcome Back</h1>
+    <p class="login-desc">Sign in to submit tickets and track your requests</p>
+    <div class="login-form">
+      <div class="login-field">
+        <label>Full Name</label>
+        <input type="text" id="login-name" class="portal-input" placeholder="e.g. John Smith" autocomplete="name"/>
+      </div>
+      <div class="login-field">
+        <label>Work Email</label>
+        <input type="email" id="login-email" class="portal-input" placeholder="you@company.com" autocomplete="email"/>
+      </div>
+      <div class="login-field">
+        <label>Department</label>
+        <select id="login-dept" class="portal-input">
+          <option value="">Select department…</option>
+          <option>Engineering</option>
+          <option>Marketing</option>
+          <option>Finance</option>
+          <option>HR</option>
+          <option>Sales</option>
+          <option>Operations</option>
+          <option>Design</option>
+          <option>Legal</option>
+        </select>
+      </div>
+      <button class="portal-btn portal-btn-primary" id="login-btn">Access Portal →</button>
+      <div class="login-error" id="login-error"></div>
+    </div>
+    <div class="login-footer">
+      Already know your ticket ID?
+      <a href="#" id="quick-track-link">Quick track →</a>
+    </div>
+    <a href="index.html" class="admin-link">🔐 Admin Dashboard</a>
+  </div>
+</div>
+
+<!-- ======= MAIN PORTAL ======= -->
+<div id="portal-screen" class="screen">
+
+  <!-- Top Nav -->
+  <nav class="portal-nav">
+    <div class="portal-nav-brand">
+      <span class="portal-nav-icon">⚡</span>
+      <span>HelpDesk<span class="accent">Pro</span> Portal</span>
+    </div>
+    <div class="portal-nav-center">
+      <button class="pnav-btn active" data-tab="dashboard">🏠 Home</button>
+      <button class="pnav-btn" data-tab="new-ticket">➕ New Ticket</button>
+      <button class="pnav-btn" data-tab="my-tickets">🎫 My Tickets</button>
+      <button class="pnav-btn" data-tab="track">🔍 Track</button>
+    </div>
+    <div class="portal-nav-right">
+      <div class="portal-user-badge" id="portal-user-badge"></div>
+      <button class="pnav-logout" id="portal-logout">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Content area -->
+  <div class="portal-body">
+
+    <!-- ===== HOME TAB ===== -->
+    <div class="ptab active" id="ptab-dashboard">
+      <div class="portal-hero">
+        <div class="hero-text">
+          <h1 id="hero-greeting">Good morning!</h1>
+          <p id="hero-sub">How can IT support you today?</p>
+        </div>
+        <div class="hero-stats" id="hero-stats"></div>
+      </div>
+
+      <!-- Quick Actions -->
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="quick-actions">
+        <button class="qa-card" onclick="switchTab('new-ticket')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#58a6ff,#bc8cff)">🎫</div>
+          <div class="qa-text">
+            <div class="qa-title">Submit a Ticket</div>
+            <div class="qa-sub">Report an IT issue or request</div>
+          </div>
+          <span class="qa-arrow">→</span>
+        </button>
+        <button class="qa-card" onclick="switchTab('my-tickets')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#3fb950,#26d4b0)">📋</div>
+          <div class="qa-text">
+            <div class="qa-title">My Tickets</div>
+            <div class="qa-sub">View and manage your requests</div>
+          </div>
+          <span class="qa-arrow">→</span>
+        </button>
+        <button class="qa-card" onclick="switchTab('track')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#d29922,#f85149)">🔍</div>
+          <div class="qa-text">
+            <div class="qa-title">Track by ID</div>
+            <div class="qa-sub">Enter a ticket ID to check status</div>
+          </div>
+          <span class="qa-arrow">→</span>
+        </button>
+        <button class="qa-card" onclick="switchTab('new-ticket');setCategory('Security')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#f85149,#d29922)">🚨</div>
+          <div class="qa-text">
+            <div class="qa-title">Report Security Issue</div>
+            <div class="qa-sub">Urgent security incidents</div>
+          </div>
+          <span class="qa-arrow">→</span>
+        </button>
+      </div>
+
+      <!-- My Recent Tickets preview -->
+      <h2 class="section-title" style="margin-top:32px">My Recent Tickets</h2>
+      <div id="recent-tickets-preview" class="recent-tickets-list"></div>
+
+      <!-- FAQ / Help -->
+      <h2 class="section-title" style="margin-top:32px">Common IT Issues</h2>
+      <div class="faq-grid">
+        <div class="faq-card" onclick="prefillAndGo('Password reset or account locked out','Account','High')">
+          <span class="faq-icon">🔑</span>
+          <div>
+            <div class="faq-title">Password / Account</div>
+            <div class="faq-sub">Reset, lockout, 2FA issues</div>
+          </div>
+        </div>
+        <div class="faq-card" onclick="prefillAndGo('Wi-Fi or VPN connection issue','Network','Medium')">
+          <span class="faq-icon">📶</span>
+          <div>
+            <div class="faq-title">Network / VPN</div>
+            <div class="faq-sub">Connectivity and access problems</div>
+          </div>
+        </div>
+        <div class="faq-card" onclick="prefillAndGo('Software installation or license issue','Software','Medium')">
+          <span class="faq-icon">💻</span>
+          <div>
+            <div class="faq-title">Software</div>
+            <div class="faq-sub">Install, crash, license issues</div>
+          </div>
+        </div>
+        <div class="faq-card" onclick="prefillAndGo('Hardware issue - device not working','Hardware','Medium')">
+          <span class="faq-icon">🖥</span>
+          <div>
+            <div class="faq-title">Hardware</div>
+            <div class="faq-sub">Device, printer, monitor issues</div>
+          </div>
+        </div>
+        <div class="faq-card" onclick="prefillAndGo('Email not working or syncing','Software','High')">
+          <span class="faq-icon">📧</span>
+          <div>
+            <div class="faq-title">Email</div>
+            <div class="faq-sub">Outlook, Teams, email sync</div>
+          </div>
+        </div>
+        <div class="faq-card" onclick="prefillAndGo('New employee account setup request','Account','Medium')">
+          <span class="faq-icon">👤</span>
+          <div>
+            <div class="faq-title">New Setup</div>
+            <div class="faq-sub">Onboarding, new device, access</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== NEW TICKET TAB ===== -->
+    <div class="ptab" id="ptab-new-ticket">
+      <div class="portal-page-header">
+        <h1>Submit a Support Ticket</h1>
+        <p>Describe your IT issue and our team will assist you as soon as possible.</p>
+      </div>
+      <div class="new-ticket-layout">
+        <div class="ticket-form-card">
+          <div class="form-section">
+            <div class="form-section-title">📝 Issue Details</div>
+            <div class="pform-group">
+              <label>Subject / Brief Description *</label>
+              <input type="text" id="nt-subject" class="portal-input" placeholder="e.g. VPN not connecting from home"/>
+            </div>
+            <div class="pform-row">
+              <div class="pform-group">
+                <label>Category *</label>
+                <select id="nt-category" class="portal-input">
+                  <option value="">Select category…</option>
+                  <option>Network</option>
+                  <option>Hardware</option>
+                  <option>Software</option>
+                  <option>Account</option>
+                  <option>Security</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="pform-group">
+                <label>Priority *</label>
+                <select id="nt-priority" class="portal-input">
+                  <option value="Low">Low — Not urgent</option>
+                  <option value="Medium" selected>Medium — Affecting work</option>
+                  <option value="High">High — Blocking work</option>
+                  <option value="Critical">Critical — Complete outage</option>
+                </select>
+              </div>
+            </div>
+            <div class="pform-group">
+              <label>Detailed Description *</label>
+              <textarea id="nt-desc" class="portal-input" rows="5" placeholder="Please describe the issue in detail:&#10;- When did it start?&#10;- What were you doing when it happened?&#10;- How many people are affected?&#10;- What error messages do you see?"></textarea>
+            </div>
+            <div class="pform-row">
+              <div class="pform-group">
+                <label>Device / Asset (optional)</label>
+                <input type="text" id="nt-device" class="portal-input" placeholder="e.g. Dell Latitude 5520, Printer HP-3F"/>
+              </div>
+              <div class="pform-group">
+                <label>Users Affected</label>
+                <select id="nt-affected" class="portal-input">
+                  <option value="1">Just me</option>
+                  <option value="2-5">2–5 people</option>
+                  <option value="5-20">5–20 people</option>
+                  <option value="20+">20+ people / whole team</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Priority Guide -->
+          <div class="priority-guide">
+            <div class="pg-title">⚡ Priority Guide</div>
+            <div class="pg-item"><span class="pg-dot" style="background:#8b949e"></span><strong>Low:</strong> Minor inconvenience, workaround available</div>
+            <div class="pg-item"><span class="pg-dot" style="background:#58a6ff"></span><strong>Medium:</strong> Affecting productivity, no workaround</div>
+            <div class="pg-item"><span class="pg-dot" style="background:#d29922"></span><strong>High:</strong> Blocking work, time-sensitive</div>
+            <div class="pg-item"><span class="pg-dot" style="background:#f85149"></span><strong>Critical:</strong> Complete outage, security incident, data loss</div>
+          </div>
+
+          <div class="form-actions">
+            <button class="portal-btn portal-btn-ghost" onclick="switchTab('dashboard')">Cancel</button>
+            <button class="portal-btn portal-btn-primary" id="submit-ticket-btn">Submit Ticket →</button>
+          </div>
+        </div>
+
+        <!-- SLA Info sidebar -->
+        <div class="sla-sidebar">
+          <div class="sla-sidebar-card">
+            <div class="sla-title">⏱ Response Times</div>
+            <div class="sla-item"><span class="sla-badge critical">Critical</span><span>Within <strong>2 hours</strong></span></div>
+            <div class="sla-item"><span class="sla-badge high">High</span><span>Within <strong>8 hours</strong></span></div>
+            <div class="sla-item"><span class="sla-badge medium">Medium</span><span>Within <strong>24 hours</strong></span></div>
+            <div class="sla-item"><span class="sla-badge low">Low</span><span>Within <strong>72 hours</strong></span></div>
+          </div>
+          <div class="sla-sidebar-card">
+            <div class="sla-title">📞 Emergency Contact</div>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:8px">For complete system outages affecting the whole company:</p>
+            <div class="emergency-contact">
+              <div>📞 +1 (800) 555-0199</div>
+              <div>📧 urgent@helpdesk.com</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MY TICKETS TAB ===== -->
+    <div class="ptab" id="ptab-my-tickets">
+      <div class="portal-page-header">
+        <h1>My Tickets</h1>
+        <p>Track all your IT support requests</p>
+      </div>
+      <div class="my-tickets-toolbar">
+        <div class="my-tickets-filters">
+          <select id="mt-filter-status" class="portal-input filter-sel">
+            <option value="">All Status</option>
+            <option>Open</option>
+            <option>In Progress</option>
+            <option>Resolved</option>
+            <option>Closed</option>
+          </select>
+          <input type="text" id="mt-search" class="portal-input filter-input" placeholder="Search tickets…"/>
+        </div>
+        <button class="portal-btn portal-btn-primary btn-sm" onclick="switchTab('new-ticket')">+ New Ticket</button>
+      </div>
+      <div id="my-tickets-list" class="my-tickets-list"></div>
+    </div>
+
+    <!-- ===== TRACK TAB ===== -->
+    <div class="ptab" id="ptab-track">
+      <div class="portal-page-header">
+        <h1>Track a Ticket</h1>
+        <p>Enter a ticket ID to check its current status and history</p>
+      </div>
+      <div class="track-search-box">
+        <div class="track-input-wrap">
+          <span class="track-icon">🎫</span>
+          <input type="text" id="track-id-input" class="portal-input track-input" placeholder="e.g. TKT-0042" autocomplete="off"/>
+          <button class="portal-btn portal-btn-primary" id="track-btn">Track →</button>
+        </div>
+        <div class="track-hint">Format: TKT-XXXX (4 digits)</div>
+      </div>
+      <div id="track-result" class="track-result"></div>
+    </div>
+
+  </div><!-- /portal-body -->
+</div>
+
+<!-- ===== SUBMIT SUCCESS MODAL ===== -->
+<div class="pmodal-overlay" id="success-overlay">
+  <div class="pmodal">
+    <div class="success-anim">✅</div>
+    <h2>Ticket Submitted!</h2>
+    <p>Your support ticket has been created successfully. Our team will respond within the SLA timeframe.</p>
+    <div class="success-ticket-id" id="success-ticket-id">TKT-0000</div>
+    <p class="success-note">Save this ID to track your ticket anytime.</p>
+    <div class="pmodal-actions">
+      <button class="portal-btn portal-btn-ghost" id="success-track-btn">🔍 Track This Ticket</button>
+      <button class="portal-btn portal-btn-primary" id="success-close-btn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ESCALATE MODAL ===== -->
+<div class="pmodal-overlay" id="escalate-overlay">
+  <div class="pmodal">
+    <div class="escalate-header">🚨 Escalate Ticket</div>
+    <input type="hidden" id="escalate-ticket-id"/>
+    <p>Provide a reason for escalating this ticket. Escalation will increase its priority and notify the IT manager immediately.</p>
+    <div class="pform-group" style="margin-top:16px">
+      <label>Reason for Escalation *</label>
+      <textarea id="escalate-reason" class="portal-input" rows="4" placeholder="e.g. This issue has been open for 3 days and is completely blocking my work. I have a deadline tomorrow…"></textarea>
+    </div>
+    <div class="pmodal-actions">
+      <button class="portal-btn portal-btn-ghost" id="escalate-cancel-btn">Cancel</button>
+      <button class="portal-btn portal-btn-danger" id="escalate-submit-btn">🚨 Escalate Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="portal-toasts" class="portal-toasts"></div>
+
+<script src="js/data.js"></script>
+<script src="js/portal.js"></script>
+</body>
+</html>

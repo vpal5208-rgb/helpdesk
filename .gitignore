@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Wrangler
+.wrangler/
+
+# Build output (none for this static site)
+dist/
